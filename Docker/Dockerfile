@@ -1,12 +1,17 @@
-FROM amazoncorretto:11-alpine3.17 
-LABEL author="nikhita"
-LABEL organization="dockerlearning"
-ARG DOWNLOAD_LOCATION='https://referenceapplicationskhaja.s3.us-west-2.amazonaws.com/spring-petclinic-2.4.2.jar'
+FROM maven:3.9.6-amazoncorretto-17 AS builder
+COPY spring-petclinic /spring-petclinic
+RUN cd /spring-petclinic && mvn package
+
+
+FROM amazoncorretto:17-alpine3.17 
+LABEL owner="nikhita"
+LABEL purpose="dockerlearning"
+ARG ARTIFACT_LOCATION='/spring-petclinic/target/spring-petclinic-3.2.0-SNAPSHOT.jar'
 ARG USERNAME='petclinic'
 ARG HOMEDIR='/petclinic'
 RUN adduser -h ${HOMEDIR} -s /bin/sh -D ${USERNAME}
 USER ${USERNAME}
 WORKDIR ${HOMEDIR}
-ADD --chown=${USERNAME}:${USERNAME} ${DOWNLOAD_LOCATION} ${HOMEDIR}/spring-petclinic-2.4.2.jar
+COPY --from=builder --chown=${USERNAME}:${USERNAME} ${ARTIFACT_LOCATION} ${HOMEDIR}/spring-petclinic-3.2.0-SNAPSHOT.jar
 EXPOSE 8080
-CMD [ "java", "-jar", "spring-petclinic-2.4.2.jar" ]
+CMD [ "java", "-jar", "spring-petclinic-3.2.0-SNAPSHOT.jar" ]
