@@ -1,0 +1,91 @@
+# Ansible playbook to install dotnet application(nopCommerce) on a server
+
+--- 
+- name: install nopcommerce on ubuntu
+  become: true 
+  hosts: appserver 
+  vars: 
+    username: www-data
+    groupname: www-data 
+    homedir: /var/www/nopCommerce
+    nop_version: 4.60.5
+    service_file_path: /etc/systemd/system/nopCommerce.service
+  tasks: 
+    - name: Download deb package
+      ansible.builtin.get_url:
+        url: https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb
+        dest: /tmp/packages-microsoft-prod
+
+    - name: install deb packages
+      ansible.builtin.apt:
+        deb: /tmp/packages-microsoft-prod
+
+    - name: install dotnet packages
+      ansible.builtin.apt:
+        name: 
+          - apt-transport-https
+          - aspnetcore-runtime-7.0
+        state: present 
+        update_cache: true
+
+    - name: create a group nopcommerce
+      ansible.builtin.group:
+        name: "{{ groupname }}"
+        state: present
+
+    - name: create a user nopcommerce
+      ansible.builtin.user:
+        name: "{{ username }}"
+        group: "{{ groupname }}"
+        home: "{{ homedir }}"
+        create_home: true
+        state: present
+
+    - name: create a directory if doesnot exist
+      ansible.builtin.file: 
+        path: "{{ homedir }}"
+        group: "{{ groupname }}"
+        owner: "{{ username }}"
+        state: directory
+        mode: '0755'
+
+    - name: download nopcommerce
+      ansible.builtin.get_url:
+        url: "https://github.com/nopSolutions/nopCommerce/releases/download/release-{{ nop_version }}/nopCommerce_{{ nop_version }}_NoSource_linux_x64.zip"
+        dest: "{{ homedir }}/nopCommerce_{{ nop_version }}_NoSource_linux_x64.zip"
+
+    - name: install unzip
+      ansible.builtin.apt:
+        name: unzip
+        state: present
+
+    - name: unzip nopcommerce
+      ansible.builtin.unarchive:
+        src: "{{ homedir }}/nopCommerce_{{ nop_version }}_NoSource_linux_x64.zip"
+        dest: "{{ homedir }}"
+        remote_src: true
+        
+    - name: recursively change the permissions of nopcommerce
+      ansible.builtin.file:
+        path: nopCommerce/ 
+        owner: "{{ username }}"
+        group: "{{ groupname }}"
+        state: directory
+        recurse: true
+
+    - name: create the nopcommerce service file 
+      ansible.builtin.template:
+        src: templates/nopcommerce.j2
+        dest: "{{ service_file_path }}"
+        owner: "{{ username }}"
+        group: "{{ groupname }}"
+ 
+    - name: start nopcommerce
+      ansible.builtin.systemd: 
+        name: nopCommerce.service
+        state: started
+
+    - name: check the status of nopcommerce
+      ansible.builtin.command: sudo systemctl status nopCommerce.service
+      register: status_output
+  

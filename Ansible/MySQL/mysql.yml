@@ -1,0 +1,21 @@
+--- 
+- name: install mysql on ubuntu
+  become: true
+  hosts: appserver
+  tasks:
+    - name: install mysql service
+      ansible.builtin.apt:
+        name:
+          - mysql-server
+        state: present
+        update_cache: true
+    - name: mysql secure installation
+      command: sudo /usr/bin/mysql_secure_installation
+      args:
+        creates: /root/.mysql_secure_installed
+    - name: start and enable the service
+      ansible.builtin.systemd:
+        name: mysql.service
+        state: started
+        enabled: true
+    
