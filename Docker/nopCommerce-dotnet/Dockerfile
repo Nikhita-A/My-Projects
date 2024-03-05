@@ -9,7 +9,7 @@ RUN apk update && \
     rm nopCommerce_4.60.5_NoSource_linux_x64.zip
 
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0-alpine3.18
+FROM mcr.microsoft.com/dotnet/runtime:8.0-alpine3.18
 LABEL app=".NET application"
 COPY --from=downloader /nopCommerce /nopCommerce
 ENV ASPNETCORE_URLS="http://0.0.0.0:5000"
